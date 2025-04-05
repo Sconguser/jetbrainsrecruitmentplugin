@@ -13,7 +13,7 @@ import com.intellij.pom.Navigatable;
 import git4idea.GitVcs;
 import org.jetbrains.annotations.NotNull;
 
-public class RenameCurrentCommitAction extends AnAction {
+public class RenameLastCommitAction extends AnAction {
 
 
     @Override
