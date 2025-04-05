@@ -4,33 +4,54 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.CommonDataKeys;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.ui.Messages;
 import com.intellij.openapi.vcs.AbstractVcs;
 import com.intellij.openapi.vcs.ProjectLevelVcsManager;
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.pom.Navigatable;
+import git4idea.GitUtil;
 import git4idea.GitVcs;
+import git4idea.checkin.GitCheckinEnvironment;
 import org.jetbrains.annotations.NotNull;
+
 
 public class RenameLastCommitAction extends AnAction {
 
 
     @Override
-    public void actionPerformed (AnActionEvent event) {
-        // Using the event, create and show a dialog
-        Project currentProject = event.getProject();
-        StringBuilder message = new StringBuilder(event.getPresentation()
-                .getText() + " Selected!");
-        // If an element is selected in the editor, add info about it.
-        Navigatable selectedElement = event.getData(CommonDataKeys.NAVIGATABLE);
-        if (selectedElement != null) {
-            message.append("\nSelected Element: ")
-                    .append(selectedElement);
-        }
-        String title = event.getPresentation()
-                .getDescription();
-        Messages.showMessageDialog(currentProject, message.toString(), title, Messages.getInformationIcon());
+    public void actionPerformed (@NotNull AnActionEvent event) {
+        ApplicationManager.getApplication()
+                .executeOnPooledThread(() -> {
+                    try {
+                        Project project = event.getProject();
+                        if (project == null) {
+                            return;
+                        }
+                        VirtualFile file = event.getData(CommonDataKeys.VIRTUAL_FILE);
+                        if (file == null) {
+                            throw new RuntimeException("File is null");
+                        }
+                        VirtualFile root = GitUtil.getRootForFile(project, file);
+                        ProjectLevelVcsManager.getInstance(project)
+                                .getAllActiveVcss();
+                        GitVcs gitVcs = GitVcs.getInstance(project);
+                        GitCheckinEnvironment gitCheckinEnvironment = (GitCheckinEnvironment) gitVcs.getCheckinEnvironment();
+                        if (gitCheckinEnvironment == null) {
+                            return;
+                        }
+                        String lastCommitMessage = gitCheckinEnvironment.getLastCommitMessage(root);
+                        if (lastCommitMessage == null) {
+                            return;
+                        }
+                        if (gitCheckinEnvironment.isAmendCommitSupported()) {
+//                            List<VcsException> exceptions = gitCheckinEnvironment.commit(new ArrayList<>(),
+//                                    "newCommitMessage", commitContext, new HashSet<>());
+//                            exceptions.forEach(e -> System.out.println(e.getMessage()));
+                        }
+                    } catch (Exception e) {
+                        System.out.println(e);
+                    }
+                });
     }
 
     @Override
@@ -59,7 +80,6 @@ public class RenameLastCommitAction extends AnAction {
 
     @Override
     public @NotNull ActionUpdateThread getActionUpdateThread () {
-
         return ActionUpdateThread.BGT;
     }
 }
