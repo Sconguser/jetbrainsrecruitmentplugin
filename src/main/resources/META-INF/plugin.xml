@@ -25,7 +25,7 @@
     </extensions>
     <actions>
         <action id="actions.RenameLastCommitAction"
-                class="com.plugin.internship.jetbrainsrecruitmentplugin.actions.RenameLastCommitAction"
+                class="com.plugin.internship.jetbrainsrecruitmentplugin.actions.RenameCommitAction"
                 text="Rename Last Commit" description="Change name of the last commit">
             <add-to-group group-id="VcsGroups" anchor="first"/>
         </action>
