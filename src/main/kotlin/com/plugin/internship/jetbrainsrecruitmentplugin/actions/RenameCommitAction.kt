@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.NonEmptyInputValidator
 import com.intellij.openapi.vcs.ProjectLevelVcsManager
@@ -39,21 +40,31 @@ class RenameCommitAction : AnAction() {
                         gitVcs.checkinEnvironment as GitCheckinEnvironment? ?: return@executeOnPooledThread
                     if (!gitVcs.isCommitActionDisabled && gitCheckinEnvironment.isAmendCommitSupported()) {
                         val repository: GitRepository? =
-                            GitUtil.getRepositoryManager(project).getRepositoryForFileQuick(file);
+                            GitUtil.getRepositoryManager(project).getRepositoryForFileQuick(file)
                         if (repository != null) {
                             val handler =
-                                GitLineHandler(project, repository.root, GitCommand.COMMIT)
-                            handler.setStdoutSuppressed(false);
-                            handler.addParameters("--amend", "-m", newMessage);
+                                gitLineHandler(project, repository, newMessage)
                             val command = Git.getInstance().runCommand(handler)
                             command.throwOnError()
-                            repository.update();
+                            repository.update()
                         }
                     }
                 } catch (e: Exception) {
                     throw RuntimeException(e)
                 }
             }
+    }
+
+    private fun gitLineHandler(
+        project: Project,
+        repository: GitRepository,
+        newMessage: String?
+    ): GitLineHandler {
+        val handler =
+            GitLineHandler(project, repository.root, GitCommand.COMMIT)
+        handler.setStdoutSuppressed(false)
+        handler.addParameters("--amend", "-m", newMessage)
+        return handler
     }
 
     override fun update(event: AnActionEvent) {
