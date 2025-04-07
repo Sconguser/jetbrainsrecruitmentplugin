@@ -8,9 +8,9 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.NonEmptyInputValidator
-import com.intellij.openapi.vcs.ProjectLevelVcsManager
 import git4idea.GitUtil
 import git4idea.GitVcs
+import git4idea.branch.GitBranchUtil
 import git4idea.checkin.GitCheckinEnvironment
 import git4idea.commands.Git
 import git4idea.commands.GitCommand
@@ -21,6 +21,7 @@ class RenameCommitAction:DumbAwareAction() {
 
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
+        ///TODO: add localization
         val newMessage = Messages.showInputDialog(
             project,
             "Rename last commit name",
@@ -43,6 +44,7 @@ class RenameCommitAction:DumbAwareAction() {
                         if (repository != null) {
                             val handler =
                                 gitLineHandler(project, repository, newMessage)
+                            /// TODO: what if something is staged
                             val command = Git.getInstance().runCommand(handler)
                             command.throwOnError()
                             repository.update()
@@ -72,14 +74,8 @@ class RenameCommitAction:DumbAwareAction() {
             event.presentation.isEnabledAndVisible = false
             return
         }
-/// ToDO: file is null in some contexts (anything but file structure open as a sidebar)
-        val file = event.getData(CommonDataKeys.VIRTUAL_FILE)
-        ProjectLevelVcsManager.getInstance(project)
-            .allActiveVcss
-        val vcs = ProjectLevelVcsManager.getInstance(project)
-            .getVcsFor(file)
-        val isGit = (vcs is GitVcs)
-        event.presentation.isEnabledAndVisible = isGit
+        val gitRepository = GitBranchUtil.guessWidgetRepository(project, event.dataContext)
+        event.presentation.isEnabledAndVisible = gitRepository != null
     }
 
     override fun getActionUpdateThread(): ActionUpdateThread {
