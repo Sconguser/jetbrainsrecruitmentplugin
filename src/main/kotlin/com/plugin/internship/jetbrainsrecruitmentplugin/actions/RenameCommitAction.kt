@@ -31,9 +31,19 @@ class RenameCommitAction:DumbAwareAction() {
             .executeOnPooledThread {
                 try {
                     val gitVcs = GitVcs.getInstance(project)
-                    ///TODO: this potentially returns after user has already put new commit name
                     val gitCheckinEnvironment =
-                        gitVcs.checkinEnvironment as GitCheckinEnvironment? ?: return@executeOnPooledThread
+                        gitVcs.checkinEnvironment as GitCheckinEnvironment?
+                    if (gitCheckinEnvironment == null) {
+                        ApplicationManager.getApplication().invokeAndWait {
+                            Messages.showMessageDialog(
+                                project,
+                                "There is a problem with getting Git environment. Operation is not possible.",
+                                "Git Environment Error",
+                                Messages.getWarningIcon()
+                            )
+                        }
+                        return@executeOnPooledThread
+                    }
                     if (!gitVcs.isCommitActionDisabled && gitCheckinEnvironment.isAmendCommitSupported()) {
                         val gitRepository = GitBranchUtil.guessWidgetRepository(project, event.dataContext)
                         if (gitRepository != null) {
