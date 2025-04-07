@@ -34,28 +34,22 @@ class RenameCommitAction:DumbAwareAction() {
                     val gitCheckinEnvironment =
                         gitVcs.checkinEnvironment as GitCheckinEnvironment?
                     if (gitCheckinEnvironment == null) {
-                        ApplicationManager.getApplication().invokeAndWait {
-                            Messages.showMessageDialog(
-                                project,
-                                "There is a problem with getting Git environment. Operation is not possible.",
-                                "Git Environment Error",
-                                Messages.getWarningIcon()
-                            )
-                        }
+                        displayErrorMessageDialog(
+                            project,
+                            "There is a problem with getting Git environment. Operation is not possible.",
+                            "Git Environment Error"
+                        )
                         return@executeOnPooledThread
                     }
                     if (!gitVcs.isCommitActionDisabled && gitCheckinEnvironment.isAmendCommitSupported()) {
                         val gitRepository = GitBranchUtil.guessWidgetRepository(project, event.dataContext)
                         if (gitRepository != null) {
                             if (hasStagedChanges(project, gitRepository)) {
-                                ApplicationManager.getApplication().invokeAndWait {
-                                    Messages.showMessageDialog(
-                                        project,
-                                        "There are staged changes present. Please unstage changes before renaming the last commit.",
-                                        "Staged Changes Detected",
-                                        Messages.getWarningIcon()
-                                    )
-                                }
+                                displayErrorMessageDialog(
+                                    project,
+                                    "There are staged changes present. Please unstage changes before renaming the last commit.",
+                                    "Staged Changes Detected"
+                                )
                                 return@executeOnPooledThread
                             }
                             val handler = getGitLineHandler(
@@ -70,9 +64,25 @@ class RenameCommitAction:DumbAwareAction() {
                         }
                     }
                 } catch (e: Exception) {
+                    displayErrorMessageDialog(
+                        project,
+                        e.message ?: "Error information not provided",
+                        "There Was An Error"
+                    )
                     throw RuntimeException(e)
                 }
             }
+    }
+
+    private fun displayErrorMessageDialog(project: Project, message: String, title: String) {
+        ApplicationManager.getApplication().invokeAndWait {
+            Messages.showMessageDialog(
+                project,
+                message,
+                "Git Environment Error",
+                Messages.getWarningIcon()
+            )
+        }
     }
 
     private fun getGitLineHandler(
