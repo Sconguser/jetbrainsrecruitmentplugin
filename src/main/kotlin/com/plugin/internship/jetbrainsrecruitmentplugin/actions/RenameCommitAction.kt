@@ -32,7 +32,7 @@ class RenameCommitAction:DumbAwareAction() {
                 try {
                     val gitVcs = GitVcs.getInstance(project)
                     val gitCheckinEnvironment =
-                        gitVcs.checkinEnvironment as GitCheckinEnvironment?
+                        gitVcs.checkinEnvironment as? GitCheckinEnvironment
                     if (gitCheckinEnvironment == null) {
                         displayErrorMessageDialog(
                             project,
@@ -44,6 +44,9 @@ class RenameCommitAction:DumbAwareAction() {
                     if (!gitVcs.isCommitActionDisabled && gitCheckinEnvironment.isAmendCommitSupported()) {
                         val gitRepository = GitBranchUtil.guessWidgetRepository(project, event.dataContext)
                         if (gitRepository != null) {
+                            if (gitRepository.isFresh) {
+                                displayErrorMessageDialog(project, "No commit was found to rename", "No Commit Found")
+                            }
                             if (hasStagedChanges(project, gitRepository)) {
                                 displayErrorMessageDialog(
                                     project,
@@ -67,7 +70,7 @@ class RenameCommitAction:DumbAwareAction() {
                     displayErrorMessageDialog(
                         project,
                         e.message ?: "Error information not provided",
-                        "There Was An Error"
+                        "Error"
                     )
                     throw RuntimeException(e)
                 }
@@ -83,6 +86,12 @@ class RenameCommitAction:DumbAwareAction() {
                 Messages.getWarningIcon()
             )
         }
+    }
+
+    private fun hasStagedChanges(project: Project, repository: GitRepository): Boolean {
+        val handler = getGitLineHandler(project, repository, GitCommand.DIFF, "--cached", "HEAD")
+        val result = Git.getInstance().runCommand(handler)
+        return !result.success()
     }
 
     private fun getGitLineHandler(
@@ -105,14 +114,14 @@ class RenameCommitAction:DumbAwareAction() {
             event.presentation.isEnabledAndVisible = false
             return
         }
-        val gitRepository = GitBranchUtil.guessWidgetRepository(project, event.dataContext)
-        event.presentation.isEnabledAndVisible = gitRepository != null
-    }
 
-    private fun hasStagedChanges(project: Project, repository: GitRepository): Boolean {
-        val handler = getGitLineHandler(project, repository, GitCommand.DIFF, "--cached", "HEAD")
-        val result = Git.getInstance().runCommand(handler)
-        return !result.success()
+        val gitRepository = GitBranchUtil.guessWidgetRepository(project, event.dataContext)
+        if (gitRepository == null) {
+            event.presentation.isEnabledAndVisible = false
+            return
+        }
+        event.presentation.isVisible = true
+        event.presentation.isEnabled = !gitRepository.isFresh
     }
 
     override fun getActionUpdateThread(): ActionUpdateThread {
