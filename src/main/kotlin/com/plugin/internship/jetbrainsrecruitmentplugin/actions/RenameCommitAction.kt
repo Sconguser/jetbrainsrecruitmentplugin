@@ -19,7 +19,6 @@ class RenameCommitAction:DumbAwareAction() {
 
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
-        ///TODO: add localization
         val newMessage = Messages.showInputDialog(
             project,
             "Rename last commit name",
@@ -27,11 +26,12 @@ class RenameCommitAction:DumbAwareAction() {
             null,
             null,
             NonEmptyInputValidator(),
-        )
+        ) ?: return
         ApplicationManager.getApplication()
             .executeOnPooledThread {
                 try {
                     val gitVcs = GitVcs.getInstance(project)
+                    ///TODO: this potentially returns after user has already put new commit name
                     val gitCheckinEnvironment =
                         gitVcs.checkinEnvironment as GitCheckinEnvironment? ?: return@executeOnPooledThread
                     if (!gitVcs.isCommitActionDisabled && gitCheckinEnvironment.isAmendCommitSupported()) {
@@ -48,8 +48,12 @@ class RenameCommitAction:DumbAwareAction() {
                                 }
                                 return@executeOnPooledThread
                             }
-                            val handler =
-                                getAmendGitLineHandler(project, gitRepository, newMessage)
+                            val handler = getGitLineHandler(
+                                project,
+                                gitRepository,
+                                GitCommand.COMMIT,
+                                "--amend", "-m", newMessage
+                            )
                             val command = Git.getInstance().runCommand(handler)
                             command.throwOnError()
                             gitRepository.update()
@@ -61,15 +65,17 @@ class RenameCommitAction:DumbAwareAction() {
             }
     }
 
-    private fun getAmendGitLineHandler(
+    private fun getGitLineHandler(
         project: Project,
         repository: GitRepository,
-        newMessage: String?
+        gitCommand: GitCommand,
+        vararg parameters: String
     ): GitLineHandler {
         val handler =
-            GitLineHandler(project, repository.root, GitCommand.COMMIT)
-        handler.setStdoutSuppressed(false)
-        handler.addParameters("--amend", "-m", newMessage)
+            GitLineHandler(project, repository.root, gitCommand)
+        handler.setStdoutSuppressed(true)
+        handler.addParameters(*parameters)
+        handler.addParameters("--quiet")
         return handler
     }
 
@@ -82,9 +88,9 @@ class RenameCommitAction:DumbAwareAction() {
         val gitRepository = GitBranchUtil.guessWidgetRepository(project, event.dataContext)
         event.presentation.isEnabledAndVisible = gitRepository != null
     }
+
     private fun hasStagedChanges(project: Project, repository: GitRepository): Boolean {
-        val handler = GitLineHandler(project, repository.root, GitCommand.DIFF)
-        handler.addParameters("--cached", "--quiet", "HEAD")
+        val handler = getGitLineHandler(project, repository, GitCommand.DIFF, "--cached", "HEAD")
         val result = Git.getInstance().runCommand(handler)
         return !result.success()
     }
