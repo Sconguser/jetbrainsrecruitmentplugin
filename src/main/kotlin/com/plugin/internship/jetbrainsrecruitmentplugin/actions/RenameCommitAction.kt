@@ -79,7 +79,7 @@ class RenameCommitAction:DumbAwareAction() {
             Messages.showMessageDialog(
                 project,
                 message,
-                "Git Environment Error",
+                title,
                 Messages.getWarningIcon()
             )
         }
