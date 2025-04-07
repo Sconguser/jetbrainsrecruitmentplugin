@@ -1,10 +1,10 @@
 package com.plugin.internship.jetbrainsrecruitmentplugin.actions
 
 import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.NonEmptyInputValidator
@@ -17,8 +17,7 @@ import git4idea.commands.GitCommand
 import git4idea.commands.GitLineHandler
 import git4idea.repo.GitRepository
 
-///TODO: shouldn't be disabled in dumb mode
-class RenameCommitAction : AnAction() {
+class RenameCommitAction:DumbAwareAction() {
 
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
