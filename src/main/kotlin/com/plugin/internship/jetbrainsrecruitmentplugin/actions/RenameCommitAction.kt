@@ -37,9 +37,19 @@ class RenameCommitAction:DumbAwareAction() {
                     if (!gitVcs.isCommitActionDisabled && gitCheckinEnvironment.isAmendCommitSupported()) {
                         val gitRepository = GitBranchUtil.guessWidgetRepository(project, event.dataContext)
                         if (gitRepository != null) {
+                            if (hasStagedChanges(project, gitRepository)) {
+                                ApplicationManager.getApplication().invokeAndWait {
+                                    Messages.showMessageDialog(
+                                        project,
+                                        "There are staged changes present. Please unstage changes before renaming the last commit.",
+                                        "Staged Changes Detected",
+                                        Messages.getWarningIcon()
+                                    )
+                                }
+                                return@executeOnPooledThread
+                            }
                             val handler =
-                                gitLineHandler(project, gitRepository, newMessage)
-                            /// TODO: what if something is staged
+                                getAmendGitLineHandler(project, gitRepository, newMessage)
                             val command = Git.getInstance().runCommand(handler)
                             command.throwOnError()
                             gitRepository.update()
@@ -51,7 +61,7 @@ class RenameCommitAction:DumbAwareAction() {
             }
     }
 
-    private fun gitLineHandler(
+    private fun getAmendGitLineHandler(
         project: Project,
         repository: GitRepository,
         newMessage: String?
@@ -71,6 +81,12 @@ class RenameCommitAction:DumbAwareAction() {
         }
         val gitRepository = GitBranchUtil.guessWidgetRepository(project, event.dataContext)
         event.presentation.isEnabledAndVisible = gitRepository != null
+    }
+    private fun hasStagedChanges(project: Project, repository: GitRepository): Boolean {
+        val handler = GitLineHandler(project, repository.root, GitCommand.DIFF)
+        handler.addParameters("--cached", "--quiet", "HEAD")
+        val result = Git.getInstance().runCommand(handler)
+        return !result.success()
     }
 
     override fun getActionUpdateThread(): ActionUpdateThread {
