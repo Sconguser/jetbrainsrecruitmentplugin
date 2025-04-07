@@ -21,7 +21,7 @@ class RenameCommitAction:DumbAwareAction() {
         val project = event.project ?: return
         val newMessage = Messages.showInputDialog(
             project,
-            "Rename last commit name",
+            "Provide new name for the last commit",
             "Rename Last Commit",
             null,
             null,
