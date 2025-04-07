@@ -14,19 +14,12 @@ import git4idea.commands.Git
 import git4idea.commands.GitCommand
 import git4idea.commands.GitLineHandler
 import git4idea.repo.GitRepository
+import java.util.concurrent.atomic.AtomicReference
 
 class RenameCommitAction:DumbAwareAction() {
 
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
-        val newMessage = Messages.showInputDialog(
-            project,
-            "Provide new name for the last commit",
-            "Rename Last Commit",
-            null,
-            null,
-            NonEmptyInputValidator(),
-        ) ?: return
         ApplicationManager.getApplication()
             .executeOnPooledThread {
                 try {
@@ -53,6 +46,22 @@ class RenameCommitAction:DumbAwareAction() {
                                     "There are staged changes present. Please unstage changes before renaming the last commit.",
                                     "Staged Changes Detected"
                                 )
+                                return@executeOnPooledThread
+                            }
+                            val newMessageRef = AtomicReference<String?>(null)
+                            ApplicationManager.getApplication().invokeAndWait {
+                                val input = Messages.showInputDialog(
+                                    project,
+                                    "Provide new name for the last commit",
+                                    "Rename Last Commit",
+                                    null,
+                                    null,
+                                    NonEmptyInputValidator(),
+                                )
+                                newMessageRef.set(input);
+                            }
+                            val newMessage: String? = newMessageRef.get()
+                            if (newMessage.isNullOrEmpty()) {
                                 return@executeOnPooledThread
                             }
                             val handler = getGitLineHandler(
