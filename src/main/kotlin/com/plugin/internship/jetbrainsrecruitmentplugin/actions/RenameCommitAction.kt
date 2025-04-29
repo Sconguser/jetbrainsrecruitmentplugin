@@ -39,6 +39,7 @@ class RenameCommitAction:DumbAwareAction() {
                         if (gitRepository != null) {
                             if (gitRepository.isFresh) {
                                 displayErrorMessageDialog(project, "No commit was found to rename", "No Commit Found")
+                                return@executeOnPooledThread
                             }
                             if (hasStagedChanges(project, gitRepository)) {
                                 displayErrorMessageDialog(
